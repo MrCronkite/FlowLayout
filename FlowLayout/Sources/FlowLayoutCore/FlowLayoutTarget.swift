@@ -1,11 +1,3 @@
-//
-//  FlowLayoutTarget.swift
-//  FlowLayout
-//
-//  Created by Влад Шимченко on 01.09.2026.
-//
-
-
 import UIKit
 
 /// Unifies `UIView` and `UILayoutGuide` behind a single interface.

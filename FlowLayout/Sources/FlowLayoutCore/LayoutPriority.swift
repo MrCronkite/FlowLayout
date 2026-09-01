@@ -1,11 +1,3 @@
-//
-//  LayoutPriority.swift
-//  FlowLayout
-//
-//  Created by Влад Шимченко on 01.09.2026.
-//
-
-
 import UIKit
 
 /// A type-safe wrapper around `UILayoutPriority`.
@@ -37,7 +29,7 @@ public struct LayoutPriority: Sendable, Hashable {
     /// The priority used when a view is sized to fit its content.
     public static let fittingSize = LayoutPriority(UILayoutPriority.fittingSizeLevel)
 
-    var uiKitValue: UILayoutPriority { UILayoutPriority(rawValue) }
+    public var uiKitValue: UILayoutPriority { UILayoutPriority(rawValue) }
 }
 
 extension LayoutPriority: ExpressibleByIntegerLiteral {

@@ -1,6 +1,13 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
+// NOTE: FlowLayoutBuilder (result-builder DSL, milestone 0.6) and
+// FlowLayoutDebug (diagnostics, milestone 0.5) are intentionally not
+// declared yet. SwiftPM rejects a target directory that has zero source
+// files ("target ... is empty"), so the manifest only lists targets that
+// currently contain real code. Both will be added back once we reach
+// those milestones and write their first file.
+
 let package = Package(
     name: "FlowLayout",
     defaultLocalization: "en",
@@ -11,11 +18,8 @@ let package = Package(
         // Основной продукт — то, что подключает 90% пользователей: `import FlowLayout`
         .library(name: "FlowLayout", targets: ["FlowLayout"]),
 
-        // Точечные продукты для тех, кто хочет собрать свой DSL поверх ядра,
-        // или не хочет тянуть result-builder API.
-        .library(name: "FlowLayoutCore", targets: ["FlowLayoutCore"]),
-        .library(name: "FlowLayoutBuilder", targets: ["FlowLayoutBuilder"]),
-        .library(name: "FlowLayoutDebug", targets: ["FlowLayoutDebug"])
+        // Точечный продукт для тех, кто хочет собрать свой DSL поверх ядра.
+        .library(name: "FlowLayoutCore", targets: ["FlowLayoutCore"])
     ],
     targets: [
         // MARK: - Core
@@ -30,21 +34,6 @@ let package = Package(
         // Публичный fluent/method DSL: .layout { $0.pinTop(...) }
         .target(
             name: "FlowLayoutDSL",
-            dependencies: ["FlowLayoutCore"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
-
-        // MARK: - Result Builder DSL (опциональный модуль, начиная с 0.6 по роадмапу)
-        .target(
-            name: "FlowLayoutBuilder",
-            dependencies: ["FlowLayoutCore"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
-
-        // MARK: - Debug
-        // Диагностика конфликтов, ambiguity-детектор. Не тянется в релиз, если не нужен.
-        .target(
-            name: "FlowLayoutDebug",
             dependencies: ["FlowLayoutCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
@@ -66,11 +55,6 @@ let package = Package(
         .testTarget(
             name: "FlowLayoutDSLTests",
             dependencies: ["FlowLayoutDSL"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
-        .testTarget(
-            name: "FlowLayoutBuilderTests",
-            dependencies: ["FlowLayoutBuilder"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]

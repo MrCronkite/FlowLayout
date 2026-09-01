@@ -1,11 +1,3 @@
-//
-//  FlowAnchor.swift
-//  FlowLayout
-//
-//  Created by Влад Шимченко on 01.09.2026.
-//
-
-
 import UIKit
 
 /// A type-safe wrapper around `NSLayoutAnchor<AnchorType>`.
