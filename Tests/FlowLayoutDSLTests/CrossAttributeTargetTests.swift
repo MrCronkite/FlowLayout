@@ -48,8 +48,11 @@ final class CrossAttributeTargetTests: XCTestCase {
 
     func test_pinTop_toViewOf_usesSameAttribute() {
         // .view(_:) means "same edge as the one being pinned" — top-to-top here.
+        let container = UIView()
         let a = UIView()
         let b = UIView()
+        container.addSubview(a)
+        container.addSubview(b)
 
         let group = b.layout { $0.pinTop(to: .view(a)) }
         let constraint = try! XCTUnwrap(group.constraints.first)

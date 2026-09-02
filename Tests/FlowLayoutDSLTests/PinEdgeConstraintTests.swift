@@ -130,8 +130,11 @@ final class PinEdgeConstraintTests: XCTestCase {
     }
 
     func test_pinWidth_relativeToOtherView_appliesMultiplier() {
+        let container = UIView()
         let subview = UIView()
         let other = UIView()
+        container.addSubview(subview)
+        container.addSubview(other)
 
         let group = subview.layout { $0.pinWidth(to: other, multiplier: 0.5, offset: 4) }
         let constraint = try! XCTUnwrap(group.constraints.first)

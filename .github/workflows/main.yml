@@ -35,6 +35,7 @@ jobs:
 
       - name: Build and test on iOS Simulator
         run: |
+          set -o pipefail
           xcodebuild test \
             -scheme FlowLayout-Package \
             -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
