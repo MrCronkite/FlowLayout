@@ -1,34 +1,15 @@
-//
-//  CompositeConstraintTests.swift
-//  FlowLayout
-//
-//  Created by Влад Шимченко on 02.09.2026.
-//
-
-
 import XCTest
 import UIKit
 import FlowLayoutDSL
 
 @MainActor
 final class CompositeConstraintTests: XCTestCase {
-    private var superview: UIView!
-    private var subview: UIView!
-
-    override func setUp() {
-        super.setUp()
-        superview = UIView()
-        subview = UIView()
-        superview.addSubview(subview)
-    }
-
-    override func tearDown() {
-        superview = nil
-        subview = nil
-        super.tearDown()
-    }
 
     func test_pinEdges_createsFourConstraintsWithMatchingInset() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
         let group = subview.layout { $0.pinEdges(to: .superview, inset: 16) }
         XCTAssertEqual(group.constraints.count, 4)
 
@@ -44,6 +25,10 @@ final class CompositeConstraintTests: XCTestCase {
     }
 
     func test_pinEdges_withUIEdgeInsets_appliesPerEdgeValues() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
         let insets = UIEdgeInsets(top: 10, left: 20, bottom: 30, right: 40)
         let group = subview.layout { $0.pinEdges(to: .superview, insets: insets) }
 
@@ -59,6 +44,10 @@ final class CompositeConstraintTests: XCTestCase {
     }
 
     func test_pinCenter_createsTwoConstraintsWithOffset() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
         let group = subview.layout { $0.pinCenter(to: .superview, offset: CGPoint(x: 5, y: -5)) }
         XCTAssertEqual(group.constraints.count, 2)
 
@@ -70,6 +59,8 @@ final class CompositeConstraintTests: XCTestCase {
     }
 
     func test_pinSize_createsWidthAndHeightConstraints() {
+        let subview = UIView()
+
         let group = subview.layout { $0.pinSize(CGSize(width: 100, height: 44)) }
         XCTAssertEqual(group.constraints.count, 2)
 

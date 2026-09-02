@@ -1,11 +1,3 @@
-//
-//  LayoutConstraintGroupTests.swift
-//  FlowLayout
-//
-//  Created by Влад Шимченко on 02.09.2026.
-//
-
-
 import XCTest
 import UIKit
 import FlowLayoutDSL
