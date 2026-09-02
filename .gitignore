@@ -1,7 +1,8 @@
+# Xcode / SwiftPM
 .build/
 .swiftpm/
 *.xcodeproj
-.DS_Store
 xcuserdata/
 DerivedData/
-.netrc
+.DS_Store
+*.xcuserstate
