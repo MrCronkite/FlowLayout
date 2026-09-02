@@ -15,38 +15,29 @@ let package = Package(
         .iOS(.v15)
     ],
     products: [
-        // Основной продукт — то, что подключает 90% пользователей: `import FlowLayout`
         .library(name: "FlowLayout", targets: ["FlowLayout"]),
-
-        // Точечный продукт для тех, кто хочет собрать свой DSL поверх ядра.
-        .library(name: "FlowLayoutCore", targets: ["FlowLayoutCore"])
+        .library(name: "FlowLayoutCore", targets: ["FlowLayoutCore"]),
+        .library(name: "FlowLayoutDebug", targets: ["FlowLayoutDebug"])
     ],
     targets: [
-        // MARK: - Core
-        // Anchor-абстракции, unified target (UIView/UILayoutGuide), priority, inset.
-        // Не знает про DSL-синтаксис (.layout { }) — только примитивы.
         .target(
             name: "FlowLayoutCore",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
-
-        // MARK: - DSL
-        // Публичный fluent/method DSL: .layout { $0.pinTop(...) }
         .target(
             name: "FlowLayoutDSL",
             dependencies: ["FlowLayoutCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
-
-        // MARK: - Umbrella
-        // Ре-экспортирует Core + DSL для удобного `import FlowLayout`.
+        .target(
+            name: "FlowLayoutDebug",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         .target(
             name: "FlowLayout",
             dependencies: ["FlowLayoutCore", "FlowLayoutDSL"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
-
-        // MARK: - Tests
         .testTarget(
             name: "FlowLayoutCoreTests",
             dependencies: ["FlowLayoutCore"],
@@ -55,6 +46,11 @@ let package = Package(
         .testTarget(
             name: "FlowLayoutDSLTests",
             dependencies: ["FlowLayoutDSL"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "FlowLayoutDebugTests",
+            dependencies: ["FlowLayoutDebug", "FlowLayoutDSL"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]
