@@ -17,13 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
-
       - name: Show environment
         run: |
           xcodebuild -version
           swift --version
+          xcrun simctl list devices available
 
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4
