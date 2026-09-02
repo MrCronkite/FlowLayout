@@ -1,30 +1,27 @@
 import UIKit
 import FlowLayoutCore
 
-/// The object passed into a `.layout { }` closure (conventionally bound as
-/// `$0`). Every `pin*` method here creates one `NSLayoutConstraint`,
-/// hands it to the enclosing `ConstraintBuilder`, and returns `self` so
-/// calls can optionally be chained — but chaining is never required; each
-/// call also works fine as its own statement, which is the style this DSL
-/// is designed around:
-///
-/// ```swift
-/// titleLabel.layout {
-///     $0.pinTop(to: .superview, inset: 16)
-///     $0.pinLeading(to: .superview, inset: 16)
-///     $0.pinTrailing(to: .superview, inset: 16)
-/// }
-/// ```
+/// The object passed into a `.layout { }` or `.update { }` closure
+/// (conventionally bound as `$0`). Every `pin*` method here either creates
+/// a new `NSLayoutConstraint` (in `.layout { }`) or mutates an existing
+/// one's `constant`/`priority` in place (in `.update { }`) — which mode
+/// is active is transparent to the caller; the same `pin*` calls work
+/// identically either way.
 ///
 /// Inset semantics: `inset` always means "inward", regardless of edge.
 /// `pinTop(inset: 16)` pushes the edge down by 16 (`constant: +16`);
-/// `pinBottom(inset: 16)` pulls the edge up by 16 (`constant: -16`). This
-/// is a deliberate difference from raw `NSLayoutConstraint`, where the sign
-/// of `constant` must be worked out by hand for every edge.
+/// `pinBottom(inset: 16)` pulls the edge up by 16 (`constant: -16`).
 @MainActor
 public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
+    /// Whether this proxy creates brand-new constraints or updates
+    /// constraints that already exist in a `LayoutConstraintGroup`.
+    enum Mode {
+        case create(ConstraintBuilder)
+        case update(LayoutConstraintGroup)
+    }
+
     let target: Base
-    let builder: ConstraintBuilder
+    let mode: Mode
 
     // MARK: - Edges
 
@@ -203,6 +200,12 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
     }
 
     /// Pins width relative to another target's width (e.g. `pinWidth(to: other, multiplier: 0.5)`).
+    ///
+    /// - Note: If used inside `.update { }`, only `offset` can actually
+    ///   change — `multiplier` is read-only on `NSLayoutConstraint` once
+    ///   created, so a different `multiplier` passed here is silently
+    ///   ignored on update. Changing it requires recreating the constraint
+    ///   (`remake`, a later version).
     @discardableResult
     public func pinWidth(
         to other: any FlowLayoutTarget,
@@ -226,7 +229,8 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
         return self
     }
 
-    /// Pins height relative to another target's height.
+    /// Pins height relative to another target's height. See the `multiplier`
+    /// note on `pinWidth(to:multiplier:offset:relation:priority:)`.
     @discardableResult
     public func pinHeight(
         to other: any FlowLayoutTarget,
@@ -252,11 +256,6 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
 
     // MARK: - Composite: edges
 
-    /// Pins all four edges to the same container with a single inset.
-    ///
-    /// ```swift
-    /// titleLabel.layout { $0.pinEdges(to: .superview, inset: 16) }
-    /// ```
     @discardableResult
     public func pinEdges(
         to container: LayoutContainer,
@@ -272,7 +271,6 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
         return self
     }
 
-    /// Pins all four edges to the same container with independent insets per edge.
     @discardableResult
     public func pinEdges(
         to container: LayoutContainer,
@@ -332,24 +330,32 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
         guard let otherAnchor = target.resolve(source: self.target, sameAttribute: sameAttribute) else {
             assertionFailure(
                 "FlowLayout: could not resolve layout target at \(file):\(line) — " +
-                "the view has no superview yet. Add it to the hierarchy before calling .layout { }."
+                "the view has no superview yet. Add it to the hierarchy before calling .layout { } or .update { }."
             )
             return
         }
 
-        let constraint: NSLayoutConstraint
-        switch relation {
-        case .equal:
-            constraint = ownAnchor.constraint(equalTo: otherAnchor, constant: constant)
-        case .greaterThanOrEqual:
-            constraint = ownAnchor.constraint(greaterThanOrEqualTo: otherAnchor, constant: constant)
-        case .lessThanOrEqual:
-            constraint = ownAnchor.constraint(lessThanOrEqualTo: otherAnchor, constant: constant)
+        func make() -> NSLayoutConstraint {
+            let constraint: NSLayoutConstraint
+            switch relation {
+            case .equal:
+                constraint = ownAnchor.constraint(equalTo: otherAnchor, constant: constant)
+            case .greaterThanOrEqual:
+                constraint = ownAnchor.constraint(greaterThanOrEqualTo: otherAnchor, constant: constant)
+            case .lessThanOrEqual:
+                constraint = ownAnchor.constraint(lessThanOrEqualTo: otherAnchor, constant: constant)
+            }
+            constraint.priority = priority.uiKitValue
+            constraint.identifier = "FlowLayout: \(file):\(line)"
+            return constraint
         }
 
-        constraint.priority = priority.uiKitValue
-        constraint.identifier = "FlowLayout: \(file):\(line)"
-        builder.add(constraint)
+        emit(
+            make: make,
+            matches: { $0.firstAnchor === ownAnchor.rawAnchor && $0.secondAnchor === otherAnchor.rawAnchor },
+            constant: constant,
+            priority: priority
+        )
     }
 
     private func addDimensionConstraint(
@@ -360,19 +366,27 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
         file: StaticString,
         line: UInt
     ) {
-        let constraint: NSLayoutConstraint
-        switch relation {
-        case .equal:
-            constraint = dimension.constraint(equalToConstant: constant)
-        case .greaterThanOrEqual:
-            constraint = dimension.constraint(greaterThanOrEqualToConstant: constant)
-        case .lessThanOrEqual:
-            constraint = dimension.constraint(lessThanOrEqualToConstant: constant)
+        func make() -> NSLayoutConstraint {
+            let constraint: NSLayoutConstraint
+            switch relation {
+            case .equal:
+                constraint = dimension.constraint(equalToConstant: constant)
+            case .greaterThanOrEqual:
+                constraint = dimension.constraint(greaterThanOrEqualToConstant: constant)
+            case .lessThanOrEqual:
+                constraint = dimension.constraint(lessThanOrEqualToConstant: constant)
+            }
+            constraint.priority = priority.uiKitValue
+            constraint.identifier = "FlowLayout: \(file):\(line)"
+            return constraint
         }
 
-        constraint.priority = priority.uiKitValue
-        constraint.identifier = "FlowLayout: \(file):\(line)"
-        builder.add(constraint)
+        emit(
+            make: make,
+            matches: { $0.firstAnchor === dimension.rawDimension && $0.secondAnchor == nil },
+            constant: constant,
+            priority: priority
+        )
     }
 
     private func addRelativeDimensionConstraint(
@@ -385,18 +399,49 @@ public struct FlowLayoutProxy<Base: FlowLayoutTarget> {
         file: StaticString,
         line: UInt
     ) {
-        let constraint: NSLayoutConstraint
-        switch relation {
-        case .equal:
-            constraint = dimension.constraint(equalTo: other, multiplier: multiplier, constant: constant)
-        case .greaterThanOrEqual:
-            constraint = dimension.constraint(greaterThanOrEqualTo: other, multiplier: multiplier, constant: constant)
-        case .lessThanOrEqual:
-            constraint = dimension.constraint(lessThanOrEqualTo: other, multiplier: multiplier, constant: constant)
+        func make() -> NSLayoutConstraint {
+            let constraint: NSLayoutConstraint
+            switch relation {
+            case .equal:
+                constraint = dimension.constraint(equalTo: other, multiplier: multiplier, constant: constant)
+            case .greaterThanOrEqual:
+                constraint = dimension.constraint(greaterThanOrEqualTo: other, multiplier: multiplier, constant: constant)
+            case .lessThanOrEqual:
+                constraint = dimension.constraint(lessThanOrEqualTo: other, multiplier: multiplier, constant: constant)
+            }
+            constraint.priority = priority.uiKitValue
+            constraint.identifier = "FlowLayout: \(file):\(line)"
+            return constraint
         }
 
-        constraint.priority = priority.uiKitValue
-        constraint.identifier = "FlowLayout: \(file):\(line)"
-        builder.add(constraint)
+        emit(
+            make: make,
+            matches: { $0.firstAnchor === dimension.rawDimension && $0.secondAnchor === other.rawDimension },
+            constant: constant,
+            priority: priority
+        )
+    }
+
+    /// Routes a constraint through the current mode: creates and collects
+    /// it (`.create`), or finds a matching existing constraint and mutates
+    /// its `constant`/`priority` in place — falling back to creating and
+    /// appending a new one if no match exists yet (`.update`).
+    private func emit(
+        make: () -> NSLayoutConstraint,
+        matches: (NSLayoutConstraint) -> Bool,
+        constant: CGFloat,
+        priority: LayoutPriority
+    ) {
+        switch mode {
+        case .create(let builder):
+            builder.add(make())
+        case .update(let group):
+            if let existing = group.constraints.first(where: matches) {
+                existing.constant = constant
+                existing.priority = priority.uiKitValue
+            } else {
+                group.append(make())
+            }
+        }
     }
 }
