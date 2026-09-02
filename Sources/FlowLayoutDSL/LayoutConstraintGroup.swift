@@ -4,7 +4,7 @@ import UIKit
 ///
 /// Holds every constraint created inside the closure and lets the caller
 /// manage their lifecycle afterwards — deactivate them, update them via
-/// `.update { }`, or (in a later version) fully remake them.
+/// `.update { }`, or fully rebuild them via `.remake { }`.
 @MainActor
 public final class LayoutConstraintGroup {
     /// The constraints managed by this group, in creation order.
@@ -27,10 +27,18 @@ public final class LayoutConstraintGroup {
 
     /// Appends a constraint created during an `.update { }` call that had
     /// no existing match in this group, and activates it immediately.
-    /// Internal — only `FlowLayoutProxy` calls this, from within the same
-    /// module.
+    /// Internal — only `FlowLayoutProxy` calls this.
     func append(_ constraint: NSLayoutConstraint) {
         constraints.append(constraint)
         constraint.isActive = true
+    }
+
+    /// Deactivates every constraint currently in this group, replaces them
+    /// with `newConstraints`, and activates the new set in a single batch.
+    /// Internal — only `FlowLayoutTarget.remake` calls this.
+    func replace(with newConstraints: [NSLayoutConstraint]) {
+        NSLayoutConstraint.deactivate(constraints)
+        constraints = newConstraints
+        NSLayoutConstraint.activate(constraints)
     }
 }

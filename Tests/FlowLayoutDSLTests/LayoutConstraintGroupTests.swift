@@ -102,4 +102,60 @@ final class LayoutConstraintGroupTests: XCTestCase {
 
         XCTAssertTrue(returned === group)
     }
+
+    func test_remake_deactivatesOldConstraintsAndActivatesNew() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
+        let group = subview.layout { $0.pinWidth(100) }
+        let oldConstraint = try! XCTUnwrap(group.constraints.first)
+
+        subview.remake(group) { $0.pinWidth(200) }
+
+        XCTAssertFalse(oldConstraint.isActive)
+        XCTAssertTrue(group.constraints.first?.isActive ?? false)
+    }
+
+    func test_remake_replacesConstraintsArrayEntirely() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
+        let group = subview.layout { $0.pinWidth(100) }
+        XCTAssertNil(group.constraints.first?.secondItem)
+
+        let other = UIView()
+        superview.addSubview(other)
+        subview.remake(group) { $0.pinWidth(to: other, multiplier: 0.5) }
+
+        XCTAssertEqual(group.constraints.count, 1)
+        let constraint = try! XCTUnwrap(group.constraints.first)
+        XCTAssertEqual(constraint.multiplier, 0.5)
+        XCTAssertTrue(constraint.secondAnchor === other.widthAnchor)
+    }
+
+    func test_remake_returnsSameGroupInstance() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
+        let group = subview.layout { $0.pinTop(to: .superview) }
+        let returned = subview.remake(group) { $0.pinTop(to: .superview, inset: 10) }
+
+        XCTAssertTrue(returned === group)
+    }
+
+    func test_remake_canReduceNumberOfConstraints() {
+        let superview = UIView()
+        let subview = UIView()
+        superview.addSubview(subview)
+
+        let group = subview.layout { $0.pinEdges(to: .superview, inset: 16) }
+        XCTAssertEqual(group.constraints.count, 4)
+
+        subview.remake(group) { $0.pinTop(to: .superview, inset: 16) }
+
+        XCTAssertEqual(group.constraints.count, 1)
+    }
 }
