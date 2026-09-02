@@ -12,6 +12,11 @@ import UIKit
 ///
 /// This type is intentionally minimal: it holds a single native anchor and
 /// forwards to it. No behavior is duplicated from UIKit.
+///
+/// Marked `@MainActor` because `NSLayoutAnchor`'s own `constraint(...)`
+/// factory methods are main-actor isolated in the SDK — this wrapper has
+/// no isolation of its own, it just needs to match what it forwards to.
+@MainActor
 public struct FlowAnchor<AnchorType: AnyObject>: Sendable {
     /// The underlying UIKit anchor this value wraps.
     public let rawAnchor: NSLayoutAnchor<AnchorType>
@@ -57,6 +62,10 @@ public typealias FlowYAxisAnchor = FlowAnchor<NSLayoutYAxisAnchor>
 /// `FlowAnchor` because `NSLayoutDimension` exposes extra capabilities
 /// (constant sizing, multiplier-based constraints against another
 /// dimension) that plain `NSLayoutAnchor` does not have — see `FlowDimension`.
+///
+/// Marked `@MainActor` for the same reason as `FlowAnchor`: `NSLayoutDimension`'s
+/// own `constraint(...)` factory methods are main-actor isolated.
+@MainActor
 public struct FlowDimension: Sendable {
     public let rawDimension: NSLayoutDimension
 
